@@ -19,12 +19,8 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
           cache: maven
-      # BƯỚC NÀY ĐỂ CẤP QUYỀN
-      - name: Make Maven Wrapper executable
-        run: chmod +x mvnw
-
       - name: Build with Maven
-        run: ./mvnw clean package -DskipTests # Thay bằng mvn clean verify nếu bạn muốn chạy test
+        run: mvn clean package -DskipTests # Thay bằng mvn clean verify nếu bạn muốn chạy test
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -37,7 +33,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/vetautet:latest
+          tags: ${{ secrets.DOCKER_USERNAME }}/ticket-pro:latest
 
   deploy:
     needs: build-and-test
@@ -55,7 +51,7 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           source: "environment/"
-          target: "/home/ubuntu/vetautet"
+          target: "/home/ubuntu/ticket-pro"
 
       - name: Deploy to AWS EC2
         uses: appleboy/ssh-action@v1.0.3
@@ -68,15 +64,14 @@ jobs:
           envs: DOCKER_USERNAME
           script: |
             # 1. Di chuyển vào thư mục chứa cấu hình trên EC2
-            cd /home/ubuntu/vetautet/environment
+            cd /home/ubuntu/ticket-pro
 
             # 2. Pull image mới nhất từ Docker Hub
-            docker pull $DOCKER_USERNAME/vetautet:latest
+            docker pull $DOCKER_USERNAME/ticket-pro:latest
 
             # 3. Khởi động lại các container bằng docker-compose-nginx.yml
             export DOCKER_USERNAME=$DOCKER_USERNAME
-            docker-compose -f docker-compose-nginx.yml down || true
-            docker-compose -f docker-compose-nginx.yml up -d
+            docker-compose up -d
 
             # 4. Dọn dẹp các image cũ để tránh đầy ổ cứng
             docker image prune -f
